@@ -10,7 +10,6 @@
  * @link https://space.bilibili.com/88197958
  *
  */
-$programVersion_Settings = '2.1.4';
 session_start();
 define('init', true);
 if (version_compare(PHP_VERSION, '7.0.0', '<')) {
@@ -33,12 +32,6 @@ if (!file_exists('config.php')) {
 	die("HTTP 503 服务不可用！\r\n暂未安装此程序！\r\n将在五秒内跳转到安装程序！");
 } else {
 	require('config.php');
-	if ($programVersion_Settings !== programVersion) {
-		http_response_code(503);
-		header('Content-Type: text/plain; charset=utf-8');
-		header('Refresh: 5;url=install.php');
-		die("HTTP 503 服务不可用！\r\n配置文件版本异常！\r\n将在五秒内跳转到安装程序！\r\n若重新安装无法解决问题，请重新 Clone 项目并配置！");
-	}
 }
 require('functions.php');
 // 通用响应头
@@ -477,7 +470,8 @@ if ($is_login) connectdb();
 								?>
 								本地模式：不管是否限速，一直使用本地账号解析。<br />
 								顺序模式：一直使用设置的账号解析，用到会员账号失效切换下一账号；当数据库中会员账号失效后，会使用本地账号解析。<br />
-								轮换模式：解析一次就切换一次账号，只使用会员账号；当数据库中会员账号失效后，会使用本地账号解析。<br />
+								会员账号轮换模式：解析一次就切换一次账号，只使用会员账号；当数据库中会员账号失效后，会使用本地账号解析。<br />
+								所有账号轮换模式：解析一次就切换一次账号，无视是否限速。<br />
 								手动模式：不管是否限速，一直使用数据库中设置的账号。
 								<br>
 								注意！此功能需要修改config.php的信息，请小心使用。
@@ -490,7 +484,8 @@ if ($is_login) connectdb();
 										<select class="form-control" id="SVIPSwitchMod" name="SVIPSwitchMod">
 											<option value="0" <?php if (SVIPSwitchMod == "0") echo "selected=\"selected\""; ?>>本地模式</option>
 											<option value="1" <?php if (SVIPSwitchMod == "1") echo "selected=\"selected\""; ?>>顺序模式</option>
-											<option value="2" <?php if (SVIPSwitchMod == "2") echo "selected=\"selected\""; ?>>轮换模式</option>
+											<option value="2" <?php if (SVIPSwitchMod == "2") echo "selected=\"selected\""; ?>>会员账号轮换模式</option>
+											<option value="4" <?php if (SVIPSwitchMod == "4") echo "selected=\"selected\""; ?>>所有账号轮换模式</option>
 											<option value="3" <?php if (SVIPSwitchMod == "3") echo "selected=\"selected\""; ?>>手动模式</option>
 										</select>
 									</div>
@@ -508,6 +503,89 @@ if ($is_login) connectdb();
 							</ol>
 						</nav>
 						<!-- 概览 -->
+						<div class="card">
+
+							<div class="card-header">账号状态检测</div>
+							<div class="card-body">
+								<div class="row">
+									<div class="col-md-6 col-sm-12 card-item">
+										<h5>普通账号状态</h5>
+										<p class="card-text">
+											<?php
+											$Status = AccountStatus(BDUSS, STOKEN);
+											if ($Status[0] == 0) {
+												//正常
+												$AccountName = $Status[2];
+												echo "账号名称：$AccountName<br />";
+												if ($Status[3] == 1)
+													echo "登录状态：<span class=\"text-success\">正常</span><br />";
+												else
+													echo "登录状态：<span class=\"text-danger\">异常</span><br />";
+
+												$AccountVIP = ["普通账号", "普通会员", "超级会员"][$Status[1]];
+												echo "会员状态：$AccountVIP<br />";
+												if ($Status[4] != 0) {
+													$AccountTime = time2Units($Status[4]);
+													if ($Status[4] <= 60480)
+														echo "剩余时间：<span class=\"text-danger\">$AccountTime</span><br />";
+													else
+														echo "剩余时间：$AccountTime<br />";
+												}
+											} elseif ($Status[0] == -6) {
+												echo "id为 $id 的SVIP账号已经失效<br />";
+											} else {
+												echo "出现位置错误代码：" . $Status[0] . "<br />";
+											}
+											?>
+										</p>
+										<br />
+									</div>
+									<div class="col-md-6 col-sm-12 card-item">
+										<h5>会员账号状态</h5>
+										<p class="card-text">
+											<?php
+											// 获取对应BDUSS
+											$DBSVIP = GetDBBDUSS();
+											$SVIP_BDUSS = $DBSVIP[0];
+											$id = $DBSVIP[1];
+											$SVIP_STOKEN = $DBSVIP[2];
+											if ($SVIP_STOKEN == "") {
+												echo "id为 $id 的SVIP账号没有设置对应STOKEN，无法检测<br />";
+											} else {
+												$Status = AccountStatus($SVIP_BDUSS, $SVIP_STOKEN);
+												if ($Status[0] == 0) {
+													$AccountName = $Status[2];
+													echo "账号名称：$AccountName<br />";
+													if ($Status[3] == 1)
+														echo "登录状态：<span class=\"text-success\">正常</span><br />";
+													else
+														echo "登录状态：<span class=\"text-danger\">异常</span><br />";
+
+													$AccountVIP = ["普通账号", "普通会员", "超级会员"][$Status[1]];
+													echo "会员状态：$AccountVIP<br />";
+													if ($Status[4] != 0) {
+														$AccountTime = time2Units($Status[4]);
+														if ($Status[4] <= 60480)
+															echo "剩余时间：<span class=\"text-danger\">$AccountTime</span><br />";
+														else
+															echo "剩余时间：$AccountTime<br />";
+													}
+												} elseif ($Status[0] == -6) {
+													echo "id为 $id 的SVIP账号已经失效<br />";
+												} else {
+													echo "出现位置错误代码：" . $Status[0] . "<br />";
+												}
+											}
+											?>
+										</p>
+										<br />
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<br />
+
 						<div class="card">
 							<div class="card-header">
 								概览
@@ -608,10 +686,13 @@ if ($is_login) connectdb();
 													$Mod = "顺序模式";
 													break;
 												case '2':
-													$Mod = "轮换模式";
+													$Mod = "会员账号轮换模式";
 													break;
 												case '3':
 													$Mod = "手动模式";
+													break;
+												case '4':
+													$Mod = "所有账号轮换模式";
 													break;
 												default:
 													$Mod = "未知模式";
@@ -636,6 +717,7 @@ if ($is_login) connectdb();
 
 
 		</div>
+
 	<?php
 			} ?>
 	</div>

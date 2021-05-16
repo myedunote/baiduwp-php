@@ -7,7 +7,6 @@
  *
  * 此项目 GitHub 地址：https://github.com/yuantuo666/baiduwp-php
  *
- * @version 2.1.4
  *
  * @author Yuan_Tuo <yuantuo666@gmail.com>
  * @link https://imwcr.cn/
@@ -128,6 +127,7 @@ header('X-UA-Compatible: IE=edge,chrome=1');
 			getConfig($BDUSS, 'BDUSS');
 			getConfig($STOKEN, 'STOKEN');
 			getConfig($SVIP_BDUSS, 'SVIP_BDUSS');
+			getConfig($SVIP_STOKEN, 'SVIP_STOKEN');
 			getConfig($SVIPSwitchMod, 'SVIPSwitchMod', '0'); // 有bug隐患 如果未开启数据库，必须为0
 
 			getConfig($USING_DB, 'USING_DB', true);
@@ -242,14 +242,22 @@ header('X-UA-Compatible: IE=edge,chrome=1');
 							<label class="col-sm-2 col-form-label">普通账号STOKEN</label>
 							<div class="col-sm-10">
 								<input class="form-control" name="STOKEN" placeholder="例：0c27e6ebdb50252b**********a8b44f4ba448d0d62bc0527eead328d491a613" value="<?php echo $STOKEN; ?>">
-								<small class="form-text">用来获取文件列表及信息，不需要SVIP也可。</small>
+								<small class="form-text">此信息必须与上一信息使用同一账号数据。用来获取文件列表及信息，不需要SVIP也可。</small>
 							</div>
 						</div>
+						<br />
 						<div class="form-group row">
 							<label class="col-sm-2 col-form-label">超级会员账号BDUSS</label>
 							<div class="col-sm-10">
 								<input class="form-control" name="SVIP_BDUSS" placeholder="例：W4tanVHelU2VGpxb**********0ZTZlUm1saEVtYnpTWjByfmxheWwxRFRtNlphQVFBQUFBJCQAAAAAAAAAAA……" value="<?php echo $SVIP_BDUSS; ?>">
 								<small class="form-text">用来获取文件告诉下载地址，必须为SVIP账号，否则将获取到限速地址。</small>
+							</div>
+						</div>
+						<div class="form-group row">
+							<label class="col-sm-2 col-form-label">超级会员账号STOKEN</label>
+							<div class="col-sm-10">
+								<input class="form-control" name="SVIP_STOKEN" placeholder="例：0c27e6ebdb50252b**********a8b44f4ba448d0d62bc0527eead328d491a613" value="<?php echo $SVIP_STOKEN; ?>">
+								<small class="form-text">此信息必须与上一信息使用同一账号数据。可以留空，仅为检测账号状态使用。</small>
 							</div>
 						</div>
 						<hr />
@@ -313,13 +321,15 @@ header('X-UA-Compatible: IE=edge,chrome=1');
 									<select class="form-control" id="SVIPSwitchMod" name="SVIPSwitchMod">
 										<option value="0" <?php if ($SVIPSwitchMod == "0") echo "selected=\"selected\""; ?>>本地模式</option>
 										<option value="1" <?php if ($SVIPSwitchMod == "1") echo "selected=\"selected\""; ?>>顺序模式</option>
-										<option value="2" <?php if ($SVIPSwitchMod == "2") echo "selected=\"selected\""; ?>>轮换模式</option>
+										<option value="2" <?php if ($SVIPSwitchMod == "2") echo "selected=\"selected\""; ?>>会员账号轮换模式</option>
+										<option value="4" <?php if ($SVIPSwitchMod == "4") echo "selected=\"selected\""; ?>>所有账号轮换模式</option>
 										<option value="3" <?php if ($SVIPSwitchMod == "3") echo "selected=\"selected\""; ?>>手动模式</option>
 									</select>
 									<small class="form-text">
 										本地模式：不管是否限速，一直使用本地账号解析。<br />
 										顺序模式：一直使用设置的账号解析，用到会员账号失效切换下一账号；当数据库中会员账号失效后，会使用本地账号解析。<br />
-										轮换模式：解析一次就切换一次账号，只使用会员账号；当数据库中会员账号失效后，会使用本地账号解析。<br />
+										会员账号轮换模式：解析一次就切换一次账号，只使用会员账号；当数据库中会员账号失效后，会使用本地账号解析。<br />
+										所有账号轮换模式：解析一次就切换一次账号，无视是否限速。<br />
 										手动模式：不管是否限速，一直使用数据库中设置的账号。
 									</small>
 								</div>
@@ -525,6 +535,7 @@ header('X-UA-Compatible: IE=edge,chrome=1');
 				$BDUSS = (!empty($_POST["BDUSS"])) ? $_POST["BDUSS"] : "";
 				$STOKEN = (!empty($_POST["STOKEN"])) ? $_POST["STOKEN"] : "";
 				$SVIP_BDUSS = (!empty($_POST["SVIP_BDUSS"])) ? $_POST["SVIP_BDUSS"] : "";
+				$SVIP_STOKEN = (!empty($_POST["SVIP_STOKEN"])) ? $_POST["SVIP_STOKEN"] : "";
 
 				$USING_DB = (!empty($_POST["USING_DB"])) ? $_POST["USING_DB"] : "false";
 				$servername = (!empty($_POST["DbConfig_servername"])) ? $_POST["DbConfig_servername"] : "";
@@ -586,6 +597,7 @@ header('X-UA-Compatible: IE=edge,chrome=1');
 				$update_config = str_replace('<BDUSS>', $BDUSS, $update_config);
 				$update_config = str_replace('<STOKEN>', $STOKEN, $update_config);
 				$update_config = str_replace('<SVIP_BDUSS>', $SVIP_BDUSS, $update_config);
+				$update_config = str_replace('<SVIP_STOKEN>', $SVIP_STOKEN, $update_config);
 
 				$update_config = str_replace('<USING_DB>', $USING_DB, $update_config);
 				$update_config = str_replace('<servername>', $servername, $update_config);
