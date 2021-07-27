@@ -67,9 +67,9 @@ if ($method == "ADMINAPI") {
 			break;
 		case "singleBDUSS":
 			// 先处理是否有新增加数据
-			$BDUSS = (!empty($_POST["BDUSS"])) ? trim($_POST["BDUSS"]) : "";
-			$STOKEN = (!empty($_POST["STOKEN"])) ? $_POST["STOKEN"] : "";
-			$name = (!empty($_POST["name"])) ? $_POST["name"] : "";
+			$BDUSS = htmlspecialchars((!empty($_POST["BDUSS"])) ? trim($_POST["BDUSS"]) : "", ENT_QUOTES);
+			$STOKEN = htmlspecialchars((!empty($_POST["STOKEN"])) ? $_POST["STOKEN"] : "", ENT_QUOTES);
+			$name = htmlspecialchars((!empty($_POST["name"])) ? $_POST["name"] : "", ENT_QUOTES);
 			if ($BDUSS != "" and strlen($BDUSS) == 192) {
 				// 开始录入
 				$add_time = date("Y-m-d H:i:s");
@@ -86,7 +86,7 @@ if ($method == "ADMINAPI") {
 			break;
 		case "multiBDUSS":
 			$BDUSS = (!empty($_POST["MULTI_BDUSS"])) ? trim($_POST["MULTI_BDUSS"]) : "";
-			$name = (!empty($_POST["name"])) ? $_POST["name"] : "";
+			$name = htmlspecialchars((!empty($_POST["name"])) ? $_POST["name"] : "", ENT_QUOTES);
 			if ($BDUSS != "") {
 				// 开始录入
 				$allsql = "";
@@ -94,7 +94,7 @@ if ($method == "ADMINAPI") {
 
 				$AllBduss = explode("\n", $BDUSS);
 				for ($i = 0; $i < count($AllBduss); $i++) {
-					$sql = "INSERT INTO `" . $dbtable . "_svip`( `name`, `svip_bduss`, `add_time`, `state`, `is_using`) VALUES ('$name-" . ($i + 1) . "','" . $AllBduss[$i] . "','$add_time',1,'');";
+					$sql = "INSERT INTO `" . $dbtable . "_svip`( `name`, `svip_bduss`, `add_time`, `state`, `is_using`) VALUES ('$name-" . ($i + 1) . "','" . htmlspecialchars($AllBduss[$i], ENT_QUOTES) . "','$add_time',1,'');";
 					$allsql .= $sql;
 				}
 
@@ -112,7 +112,7 @@ if ($method == "ADMINAPI") {
 			} else EchoInfo(-1, array("msg" => "添加失败", "detail" => "请检查BDUSS是否填写正确"));
 			break;
 		case "SvipSettingFirstAccount":
-			$id = (!empty($_GET["id"])) ? $_GET["id"] : "";
+			$id = htmlspecialchars((!empty($_GET["id"])) ? $_GET["id"] : "", ENT_QUOTES);
 			if ($id == "") {
 				// 参数错误
 				EchoInfo(-1, array("msg" => "传入参数错误"));
@@ -132,7 +132,7 @@ if ($method == "ADMINAPI") {
 			}
 			break;
 		case "SvipSettingNormalAccount":
-			$id = (!empty($_GET["id"])) ? $_GET["id"] : "";
+			$id = htmlspecialchars((!empty($_GET["id"])) ? $_GET["id"] : "", ENT_QUOTES);
 			if ($id == "") {
 				// 参数错误
 				EchoInfo(-1, array("msg" => "传入参数错误"));
@@ -154,9 +154,9 @@ if ($method == "ADMINAPI") {
 			echo GetIPTablePage($page);
 			break;
 		case "NewIp":
-			$ip = (!empty($_POST["ip"])) ? trim($_POST["ip"]) : "";
-			$remark = (!empty($_POST["remark"])) ? $_POST["remark"] : "";
-			$type = $_POST["type"];
+			$ip = htmlspecialchars((!empty($_POST["ip"])) ? trim($_POST["ip"]) : "", ENT_QUOTES);
+			$remark = htmlspecialchars((!empty($_POST["remark"])) ? $_POST["remark"] : "", ENT_QUOTES);
+			$type = htmlspecialchars($_POST["type"], ENT_QUOTES);
 			if ($ip != "") {
 				// 开始录入
 				$add_time = date("Y-m-d H:i:s");
@@ -188,7 +188,7 @@ if ($method == "ADMINAPI") {
 		case "DeleteById":
 			//通过指定表格与ip删除对应行
 			$Type = (!empty($_GET["type"])) ? $_GET["type"] : "";
-			$Id = (!empty($_GET["id"])) ? $_GET["id"] : "";
+			$Id = htmlspecialchars((!empty($_GET["id"])) ? $_GET["id"] : "", ENT_QUOTES);
 			if ($Type != "" and $Id != "") {
 				// 开始执行
 				// 生成SQL
@@ -226,109 +226,122 @@ if ($method == "ADMINAPI") {
 			break;
 	}
 	exit;
-}
-switch ($method) {
-	case 'LastParse':
-		// 返回数据库中上一次解析的时间，及SVIP状态
-		if (USING_DB) {
-			// 开启了数据库
-			connectdb(true);
+} else {
+	switch ($method) {
+		case 'LastParse':
+			// 返回数据库中上一次解析的时间，及SVIP状态
+			if (USING_DB) {
+				// 开启了数据库
+				connectdb(true);
 
-			$sql = "SELECT * FROM `$dbtable` WHERE `size`>=52428800 ORDER BY `ptime` DESC LIMIT 0,1"; // 时间倒序输出第一项
-			$mysql_query = mysqli_query($conn, $sql);
-			if ($Result = mysqli_fetch_assoc($mysql_query)) {
-				// 存在数据
-				$Time = $Result["ptime"];
-				$realLink = $Result["realLink"];
-				$SvipState = (strstr('https://' . $realLink, "//qdall")) ? 0 : 1; // 1:正常 0:限速
-				$SvipStateMsg = ($SvipState) ? "状态正常" : "已被限速";
-				$SvipTips = ($SvipState) ? "正常" : "限速";
-				EchoInfo(0, array(
-					"msg" => "SVIP账号状态<br /><div align='left'>上次解析时间：" . $Time . "<br />上次解析状态：" . $SvipStateMsg . "</div>",
-					"svipstate" => $SvipState,
-					"sviptips" => $SvipTips
-				));
-			} else {
-				EchoInfo(-1, array("msg" => "数据库中没有状态数据，请解析一次大于50MB文件以刷新账号状态", "sviptips" => "Unknown"));//防止产生误解，把提示写完全
-			}
-		} else {
-			// 未开启数据库
-			EchoInfo(-1, array("msg" => "未开启数据库功能", "sviptips" => "Unknown"));
-		}
-		break;
-
-	case "ParseCount":
-		// 返回数据库中所有的解析总数和文件总大小
-		if (USING_DB) {
-			// 开启了数据库
-			connectdb(true);
-
-			$sql = "SELECT count(`id`) as AllCount,sum(`size`) as AllSize FROM `$dbtable`";
-			$mysql_query = mysqli_query($conn, $sql);
-			if ($Result = mysqli_fetch_assoc($mysql_query)) {
-				// 存在数据
-				$AllCount = $Result["AllCount"];
-				$AllSize = formatSize((float)$Result["AllSize"]); // 格式化获取到的文件大小
-				$ParseCountMsg =  "累计解析 $AllCount 个，共 $AllSize";
-			} else {
-				EchoInfo(0, array("msg" => "当前数据库版本不支持此统计操作"));
-				exit;
-			}
-
-			$sql = "SELECT count(`id`) as AllCount,sum(`size`) as AllSize FROM `$dbtable` WHERE date(`ptime`)=date(now());"; // 获取今天的解析量
-			$mysql_query = mysqli_query($conn, $sql);
-			if ($Result = mysqli_fetch_assoc($mysql_query)) {
-				// 存在数据
-				$AllCount = $Result["AllCount"];
-				$AllSize = formatSize((float)$Result["AllSize"]); // 格式化获取到的文件大小
-				$TodayParseCountMsg =  "今日解析 $AllCount 个，共 $AllSize";
-			} else {
-				EchoInfo(0, array("msg" => "当前数据库版本不支持此统计操作"));
-				exit;
-			}
-			EchoInfo(0, array("msg" => "系统使用统计<br /><div align='left'>$ParseCountMsg<br />$TodayParseCountMsg</div>"));
-		} else {
-			// 未开启数据库
-			EchoInfo(-1, array("msg" => "未开启数据库功能"));
-		}
-		break;
-	case "CheckMySQLConnect":
-		// 检查数据库连接是否正常
-		$servername = (!empty($_POST["servername"])) ? $_POST["servername"] : "";
-		$username = (!empty($_POST["username"])) ? $_POST["username"] : "";
-		$DBPassword = (!empty($_POST["DBPassword"])) ? $_POST["DBPassword"] : "";
-		$dbname = (!empty($_POST["dbname"])) ? $_POST["dbname"] : "";
-		$dbtable = (!empty($_POST["dbtable"])) ? $_POST["dbtable"] : "";
-		if (!function_exists('mysqli_connect')) {
-			EchoInfo(-2, array("msg" => "<br/>您未安装或未启用 mysqli 扩展，<br/>不能使用数据库功能。<br/>请自行关闭数据库功能。"));
-		}
-		$conn = mysqli_connect($servername, $username, $DBPassword);
-		$GLOBALS['conn'] = $conn;
-		// Check connection
-		if (!$conn) {
-			EchoInfo(-1, array("msg" => mysqli_connect_error()));
-		} else {
-			// 连接成功，检查数据库是否存在
-			$sql = "SELECT * FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$dbname';"; // 查询是否有此数据库
-			$mysql_query = mysqli_query($conn, $sql);
-			if (mysqli_fetch_assoc($mysql_query)) {
-				// 存在数据库
-				EchoInfo(0, array("msg" => "数据库连接成功，存在 $dbname 数据库"));
-			} else {
-				// 不存在数据库，需创建
-				$sql = "CREATE DATABASE `$dbname` character set utf8;"; // 查询是否有此数据库
+				$sql = "SELECT * FROM `$dbtable` WHERE `size`>=52428800 ORDER BY `ptime` DESC LIMIT 0,1"; // 时间倒序输出第一项
 				$mysql_query = mysqli_query($conn, $sql);
-				if ($mysql_query) {
-					// 创建成功
-					EchoInfo(0, array("msg" => "成功连接并创建数据库 $dbname 。"));
+				if ($Result = mysqli_fetch_assoc($mysql_query)) {
+					// 存在数据
+					$Time = $Result["ptime"];
+					$realLink = $Result["realLink"];
+					$SvipState = (strstr('https://' . $realLink, "//qdall")) ? 0 : 1; // 1:正常 0:限速
+					$SvipStateMsg = ($SvipState) ? "状态正常" : "已被限速";
+					$SvipTips = ($SvipState) ? "正常" : "限速";
+					EchoInfo(0, array(
+						"msg" => "SVIP账号状态<br /><div align='left'>上次解析时间：" . $Time . "<br />上次解析状态：" . $SvipStateMsg . "</div>",
+						"svipstate" => $SvipState,
+						"sviptips" => $SvipTips
+					));
 				} else {
-					// 创建失败
-					EchoInfo(-1, array("msg" => "数据库连接成功，但创建数据库失败。<br />请手动创建 $dbname 数据库后再次检查连接。<br />"));
+					EchoInfo(-1, array("msg" => "数据库中没有状态数据，请解析一次大于50MB文件以刷新账号状态", "sviptips" => "Unknown")); //防止产生误解，把提示写完全
+				}
+			} else {
+				// 未开启数据库
+				EchoInfo(-1, array("msg" => "未开启数据库功能", "sviptips" => "Unknown"));
+			}
+			break;
+
+		case "ParseCount":
+			// 返回数据库中所有的解析总数和文件总大小
+			if (USING_DB) {
+				// 开启了数据库
+				connectdb(true);
+
+				$sql = "SELECT count(`id`) as AllCount,sum(`size`) as AllSize FROM `$dbtable`";
+				$mysql_query = mysqli_query($conn, $sql);
+				if ($Result = mysqli_fetch_assoc($mysql_query)) {
+					// 存在数据
+					$AllCount = $Result["AllCount"];
+					$AllSize = formatSize((float)$Result["AllSize"]); // 格式化获取到的文件大小
+					$ParseCountMsg =  "累计解析 $AllCount 个，共 $AllSize";
+				} else {
+					EchoInfo(0, array("msg" => "当前数据库版本不支持此统计操作"));
+					exit;
+				}
+
+				$sql = "SELECT count(`id`) as AllCount,sum(`size`) as AllSize FROM `$dbtable` WHERE date(`ptime`)=date(now());"; // 获取今天的解析量
+				$mysql_query = mysqli_query($conn, $sql);
+				if ($Result = mysqli_fetch_assoc($mysql_query)) {
+					// 存在数据
+					$AllCount = $Result["AllCount"];
+					$AllSize = formatSize((float)$Result["AllSize"]); // 格式化获取到的文件大小
+					$TodayParseCountMsg =  "今日解析 $AllCount 个，共 $AllSize";
+				} else {
+					EchoInfo(0, array("msg" => "当前数据库版本不支持此统计操作"));
+					exit;
+				}
+				EchoInfo(0, array("msg" => "系统使用统计<br /><div align='left'>$ParseCountMsg<br />$TodayParseCountMsg</div>"));
+			} else {
+				// 未开启数据库
+				EchoInfo(-1, array("msg" => "未开启数据库功能"));
+			}
+			break;
+		case "CheckMySQLConnect":
+			// 检查数据库连接是否正常
+			$servername = htmlspecialchars((!empty($_POST["servername"])) ? $_POST["servername"] : "", ENT_QUOTES);
+			$username = htmlspecialchars((!empty($_POST["username"])) ? $_POST["username"] : "", ENT_QUOTES);
+			$DBPassword = htmlspecialchars((!empty($_POST["DBPassword"])) ? $_POST["DBPassword"] : "", ENT_QUOTES);
+			$dbname = htmlspecialchars((!empty($_POST["dbname"])) ? $_POST["dbname"] : "", ENT_QUOTES);
+			$dbtable = htmlspecialchars((!empty($_POST["dbtable"])) ? $_POST["dbtable"] : "", ENT_QUOTES);
+			if (!function_exists('mysqli_connect')) {
+				EchoInfo(-2, array("msg" => "<br/>您未安装或未启用 mysqli 扩展，<br/>不能使用数据库功能。<br/>请自行关闭数据库功能。"));
+			}
+			$conn = mysqli_connect($servername, $username, $DBPassword);
+			$GLOBALS['conn'] = $conn;
+			// Check connection
+			if (!$conn) {
+				EchoInfo(-1, array("msg" => mysqli_connect_error()));
+			} else {
+				// 连接成功，检查数据库是否存在
+				$sql = "SELECT * FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$dbname';"; // 查询是否有此数据库
+				$mysql_query = mysqli_query($conn, $sql);
+				if (mysqli_fetch_assoc($mysql_query)) {
+					// 存在数据库
+					EchoInfo(0, array("msg" => "数据库连接成功，存在 $dbname 数据库"));
+				} else {
+					// 不存在数据库，需创建
+					$sql = "CREATE DATABASE `$dbname` character set utf8;"; // 查询是否有此数据库
+					$mysql_query = mysqli_query($conn, $sql);
+					if ($mysql_query) {
+						// 创建成功
+						EchoInfo(0, array("msg" => "成功连接并创建数据库 $dbname 。"));
+					} else {
+						// 创建失败
+						EchoInfo(-1, array("msg" => "数据库连接成功，但创建数据库失败。<br />请手动创建 $dbname 数据库后再次检查连接。<br />"));
+					}
 				}
 			}
-		}
-		break;
-	default:
-		EchoInfo(-1, array("msg" => "无传入数据"));
-		break;
+			break;
+		case "CheckUpdate":
+			$includePreRelease = false; // 定义和获取是否包含预发行，是否强制检查
+			$enforce = false;
+			if (isset($_GET['includePreRelease']) && $_GET['includePreRelease'] === 'true') {
+				$includePreRelease = true;
+			}
+			if (isset($_GET['enforce']) && $_GET['enforce'] === 'true') {
+				$enforce = true;
+			}
+			$result = CheckUpdate($includePreRelease, $enforce); // 获取结果
+			header('Content-Type: application/json; charset=utf-8'); // 设置响应头
+			echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); // 输出响应
+			break;
+		default:
+			EchoInfo(-1, array("msg" => "无传入数据"));
+	}
 }
